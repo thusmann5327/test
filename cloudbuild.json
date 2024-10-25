@@ -1,0 +1,25 @@
+{
+  "steps": [
+    {
+      "name": "gcr.io/cloud-builders/docker",
+      "args": ["build", "-t", "gcr.io/glamping101/lamp-stack", "."]
+    },
+    {
+      "name": "gcr.io/cloud-builders/docker",
+      "args": ["push", "gcr.io/glamping101/lamp-stack"]
+    },
+    {
+      "name": "gcr.io/cloud-builders/gcloud",
+      "args": [
+        "run", "deploy", "lamp-stack",
+        "--image", "gcr.io/glamping101/lamp-stack",
+        "--platform", "managed",
+        "--region", "us-central1",
+        "--allow-unauthenticated"
+      ]
+    }
+  ],
+  "images": [
+    "gcr.io/glamping101/lamp-stack"
+  ]
+}
