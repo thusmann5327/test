@@ -280,7 +280,7 @@ def save_invoice(conn, invoice_data):
             header['OrderId'],
             header['PostedDate'],
             header['OrderDate'],
-            header['DueDate'],
+            header['DueDate'],  # Corrected keyword here
             header['ShipToName'],
             header['ShipToAddress'],
             header['ShipToCity'],
@@ -323,6 +323,7 @@ def save_invoice(conn, invoice_data):
         print("\nFull traceback:")
         print(traceback.format_exc())
         raise
+
 
 def check_database():
     """Function to verify database contents"""
