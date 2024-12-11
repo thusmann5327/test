@@ -213,6 +213,9 @@ def save_line_items(conn, document_id, line_items_data, items_data):
         # Debug prints
         print(f"Processing line item: {line_item}")
         print(f"Using item details: {item_detail}")
+        print(f"Calculated line total: {line_total}")
+        print(f"Sold by: {sold_by}")
+        print(f"Calculated cost per unit: {cost_per_unit}")
 
         cursor.execute('''
         INSERT INTO harbor_invoice_items 
