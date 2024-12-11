@@ -2,6 +2,7 @@ import requests
 import sqlite3
 import json
 from datetime import datetime
+import re
 
 class HarborAPI:
     def __init__(self):
@@ -180,7 +181,6 @@ def save_categories(conn, document_id, categories_data):
     conn.commit()
 
 def save_line_items(conn, document_id, line_items_data, items_data):
-    """Save line items to separate table"""
     cursor = conn.cursor()
    
     # Clear existing items for this invoice
@@ -195,7 +195,7 @@ def save_line_items(conn, document_id, line_items_data, items_data):
     
     # Process each line item
     for line_item in line_items_data.get('Value', []):
-        item_id = line_item.get('ItemId')  # Corrected path to ItemId
+        item_id = line_item.get('ItemId')
         item_detail = item_details.get(item_id, {})
         uom = item_detail.get('UOMs', [{}])[0] if item_detail else {}
         
@@ -241,7 +241,8 @@ def save_line_items(conn, document_id, line_items_data, items_data):
         ))
     
     conn.commit()
-
+    
+    
 def save_invoice(conn, invoice_data):
     """Save invoice data to database"""
     cursor = conn.cursor()
@@ -371,7 +372,7 @@ def main():
     
     # Your Bearer token (this should be obtained securely)
     token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ik5UWkVSa1F3UlVSR09FRXdSRFpDUkVFM1FVWTNNVGN4TkVJMFFUWkJPREkwUkRsR05URkROUSJ9.eyJodHRwOi8vaGFyYm9yZm9vZHMvYXV0aG9yaXplZC1jb21wYW5pZXMiOlsiSFdGIl0sImh0dHA6Ly9oYXJib3J3aG9sZXNhbGUvbG9naW4tZW1haWwiOiJ0aG9tYXMuYS5odXNtYW5uQGdtYWlsLmNvbSIsImh0dHA6Ly9oYXJib3J3aG9sZXNhbGUvc2FsZXMtcmVwLWlkcyI6W10sImh0dHA6Ly9oYXJib3Jmb29kc2VydmljZS9zYWxlcy1yZXAtaWRzIjpbXSwiaHR0cDovL2hhcmJvcndob2xlc2FsZS9hdXRob3JpemVkLWFjY291bnRzIjpbIjcwMDAzMCJdLCJodHRwOi8vaGFyYm9yZm9vZHNlcnZpY2UvYXV0aG9yaXplZC1hY2NvdW50cyI6W10sImlzcyI6Imh0dHBzOi8vaGFyYm9yd2hvbGVzYWxlLmF1dGgwLmNvbS8iLCJzdWIiOiJhdXRoMHw2NDEwYTczY2E5YTRkM2MxYzk5M2IyOGMiLCJhdWQiOlsiaHR0cHM6Ly9hcGkuaGFyYm9yd2hvbGVzYWxlLmNvbSIsImh0dHBzOi8vaGFyYm9yd2hvbGVzYWxlLmF1dGgwLmNvbS91c2VyaW5mbyJdLCJpYXQiOjE3MzM4ODI1MzAsImV4cCI6MTczMzk2ODkzMCwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCBTSE9QUElOR0xJU1RTOlJFQUQgU0hPUFBJTkdMSVNUUzpTSE9QIFNIT1BQSU5HTElTVFM6Q09QWVRPTkVXIFNIT1BQSU5HTElTVFM6UkVTRVFMSVNUIFNIT1BQSU5HTElTVFM6Q1JFQVRFIFNIT1BQSU5HTElTVFM6VVBEQVRFIFNIT1BQSU5HTElTVFM6REVMRVRFIFNIT1BQSU5HTElTVFM6Q1JFQVRFTElORSBTSE9QUElOR0xJU1RTOlVQREFURUxJTkUgU0hPUFBJTkdMSVNUUzpERUxFVEVMSU5FIFNIT1BQSU5HTElTVFM6UkVQUklDRSBJVEVNUzpSRUFEIElURU1ISVNUT1JZOlJFQUQgQ1VTVE9NRVJTOlJFQUQgU0hPUFBJTkdDQVJUUzpSRUFEIFNIT1BQSU5HQ0FSVFM6TU9ESUZZIFNIT1BQSU5HQ0FSVFM6U1VCTUlUU0FMRVNPUkRFUiBTSE9QUElOR0NBUlRTOlNVQk1JVFRBR09SREVSIFNIT1BQSU5HQ0FSVFM6Q0hBTkdFQ0FSVFRZUEUgU0hPUFBJTkdDQVJUUzpSRVNFVFBST0dSRVNTIENBVEVHT1JJRVM6Q1JFQVRFIENBVEVHT1JJRVM6UkVBRCBDQVRFR09SSUVTOlVQREFURSBDQVRFR09SSUVTOkRFTEVURSBCTEFOS0VUT1JERVI6UkVBRCBSRVRVUk5PUkRFUjpSRUFEIFNBTEVTT1JERVI6UkVBRCBTQUxFU09SREVSOk1PRElGWSBQUklDRUlOUVVJUlk6UkVRVUVTVCBCUkFORFM6UkVBRCBUQUdTOlJFQUQgVVNFUkFDQ09VTlRTOlNDT1BFUyBJVEVNQVVUSDpSRUFEIElURU1BVVRIOlNFVFJVTEUgQ09NTUVOVFM6UkVBRCBPUkRFUkhJU1RPUlk6UkVBRCBSRVRBSUxQUklDSU5HOlJFQUQgUkVUQUlMUFJJQ0lORzpVUERBVEUgSVRFTUFVVEg6TU9ESUZZQk9PSyBCTEFOS0VUT1JERVI6TU9ESUZZIFVTRVJBQ0NPVU5UUzpVUERBVEUgSVRFTTpRVFlPTkhBTkQiLCJhenAiOiI2eDM3dlhaZTVrc2xHc3JFenl6TTMzcVhHaWt4Y2h3ZyJ9.PFkjQ0EEcxTSxsU1Ep0h80w9BgPUuWi3yYhU65aA5MKmZNljqUrjd3BBwQ0wHNfDrcdW9brBWjGLg_6wG0yz_6qjbda1P3K8dX3EYqjl04LTsqhaJgE3A426_RghP6FhSyedTCpbjf5KsSrkZdFwaBbiSZcByaB9GOzBOY8LQFjax03UgV4Md9VglWvMzFTFOrMJxmElO488C8R16Nep3fBW7LczIAVhMJidCGJrsjwgrxXstKJsP_YP7VgtJ4cP2qHqfacsxXS6zovshlnBvpPEb8AJB_fkzN8D0cdZ4D1UWL3NUOj5OVvbnCGmLEHzUqxtbiaLoR6wtKEmIsqG0g"
-    # Set up database connection
+   # Set up database connection
     conn = sqlite3.connect('clover.db')
     
     try:
@@ -405,7 +406,7 @@ def main():
         try:
             item_ids = []
             for item in line_items_data.get('Value', []):
-                item_id = item.get('ItemId')  # Corrected path to ItemId
+                item_id = item.get('ItemId')
                 if item_id:
                     item_ids.append(item_id)
                 else:
@@ -450,9 +451,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-  
-  
-  
-  
-  
+   
+   
+   
